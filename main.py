@@ -79,9 +79,64 @@ def shape_audio(data: bytes, played_samples: int, fade_samples: int) -> tuple[by
 
 
 # ---------------------------------------------------------------------------
+# スピーカー再生（無音を流し続けてリミッターのリセットを防ぐ）
+# ---------------------------------------------------------------------------
+class Speaker:
+    """Gemini の音声を再生する係。
+
+    Mac の内蔵スピーカーは、音が完全に途切れる（無音になる）と音量補正が
+    リセットされ、次の発話の出だしが大きく鳴ることがあります。これを防ぐため、
+    再生していない間も「ごく短い無音」を書き込み続けてデバイスを動かし続けます。
+    """
+
+    def __init__(self):
+        self.queue: asyncio.Queue[bytes] = asyncio.Queue()
+        self.stream = sd.RawOutputStream(
+            samplerate=config.RECV_SAMPLE_RATE,
+            channels=config.CHANNELS,
+            dtype="int16",
+        )
+        # 20ミリ秒ぶんの無音（int16 = 2バイト/サンプル）
+        self._silence = bytes(2 * int(config.RECV_SAMPLE_RATE * 0.02))
+        self._stop = asyncio.Event()
+        self._task: asyncio.Task | None = None
+
+    def start(self) -> None:
+        self.stream.start()
+        self._task = asyncio.create_task(self._run())
+
+    async def _run(self) -> None:
+        while not self._stop.is_set():
+            try:
+                # 再生すべき音声が来たら書き込む
+                chunk = await asyncio.wait_for(self.queue.get(), timeout=0.02)
+            except asyncio.TimeoutError:
+                # 何も来なければ無音を書き込んでデバイスを動かし続ける（キープアライブ）
+                await asyncio.to_thread(self.stream.write, self._silence)
+                continue
+            await asyncio.to_thread(self.stream.write, chunk)
+            self.queue.task_done()
+
+    async def play(self, data: bytes) -> None:
+        await self.queue.put(data)
+
+    async def wait_idle(self) -> None:
+        """キューにたまった音声をすべて再生し終えるまで待つ。"""
+        await self.queue.join()
+        await asyncio.sleep(0.2)  # デバイスの出力バッファ分の余裕
+
+    async def close(self) -> None:
+        self._stop.set()
+        if self._task is not None:
+            await self._task
+        self.stream.stop()
+        self.stream.close()
+
+
+# ---------------------------------------------------------------------------
 # Live API とのやりとり
 # ---------------------------------------------------------------------------
-async def collect_response(session, out_stream) -> tuple[str, str]:
+async def collect_response(session, speaker: "Speaker") -> tuple[str, str]:
     """Gemini からの1ターン分の応答を受け取る。
 
     - 届いた音声はスピーカーで再生する
@@ -108,7 +163,7 @@ async def collect_response(session, out_stream) -> tuple[str, str]:
                     pcm, played_samples = shape_audio(
                         part.inline_data.data, played_samples, fade_samples
                     )
-                    await asyncio.to_thread(out_stream.write, pcm)
+                    await speaker.play(pcm)
 
         # 被験者の発話の文字起こし（STT の結果）
         if server_content.input_transcription and server_content.input_transcription.text:
@@ -125,12 +180,15 @@ async def collect_response(session, out_stream) -> tuple[str, str]:
     return answer_text.strip(), question_text.strip()
 
 
-async def record_subject_turn(session, out_stream) -> tuple[str, str]:
+async def record_subject_turn(session, speaker: "Speaker") -> tuple[str, str]:
     """被験者の回答をマイクで録音して Gemini に送り、応答を受け取る。
 
     Enter を押すと録音が止まる（プッシュ・トゥ・トーク方式）。
     戻り値: (被験者の回答テキスト, Gemini の次の質問テキスト)
     """
+    # 直前の質問の音声を再生し終えてから録音を始める（録音への回り込みを防ぐ）
+    await speaker.wait_idle()
+
     # 「もう一度 Enter が押されたら録音終了」を待つタスク
     stop_waiter = asyncio.create_task(asyncio.to_thread(sys.stdin.readline))
 
@@ -163,7 +221,7 @@ async def record_subject_turn(session, out_stream) -> tuple[str, str]:
     await session.send_realtime_input(activity_end=types.ActivityEnd())
     await stop_waiter  # 念のため終了待ちを回収
 
-    return await collect_response(session, out_stream)
+    return await collect_response(session, speaker)
 
 
 # ---------------------------------------------------------------------------
@@ -207,13 +265,9 @@ async def main() -> None:
 
     client = genai.Client(api_key=config.GEMINI_API_KEY)
 
-    # Gemini の音声を再生するスピーカー用ストリーム
-    out_stream = sd.RawOutputStream(
-        samplerate=config.RECV_SAMPLE_RATE,
-        channels=config.CHANNELS,
-        dtype="int16",
-    )
-    out_stream.start()
+    # Gemini の音声を再生する係（無音を流し続けて音量補正のリセットを防ぐ）
+    speaker = Speaker()
+    speaker.start()
 
     log_file, log_path = open_log_file()
 
@@ -235,7 +289,7 @@ async def main() -> None:
                 turns={"role": "user", "parts": [{"text": config.KICKOFF_PROMPT}]},
                 turn_complete=True,
             )
-            _, question = await collect_response(session, out_stream)
+            _, question = await collect_response(session, speaker)
             print_question(question)
 
             # --- 会話ループ ---
@@ -247,7 +301,7 @@ async def main() -> None:
                 if cmd.strip().lower() == "q":
                     break
 
-                answer, next_question = await record_subject_turn(session, out_stream)
+                answer, next_question = await record_subject_turn(session, speaker)
 
                 if not answer:
                     print("   （音声を認識できませんでした。もう一度お試しください）")
@@ -293,8 +347,7 @@ async def main() -> None:
     except KeyboardInterrupt:
         pass
     finally:
-        out_stream.stop()
-        out_stream.close()
+        await speaker.close()
         log_file.close()
         print("\nインタビューを終了しました。お疲れさまでした。")
         print(f"会話ログ: {log_path}")
