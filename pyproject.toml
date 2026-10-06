@@ -1,0 +1,14 @@
+[project]
+name = "gemini-emotion-interview"
+version = "0.1.0"
+description = "Gemini Live API を使って音声で対話しながら感情分析を行う学生向けサンプル"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "google-genai>=1.0.0",
+    "sounddevice>=0.4.6",
+    "python-dotenv>=1.0.0",
+]
+
+[tool.uv]
+# 学生がそのまま使えるよう、特別な設定は不要
