@@ -13,6 +13,9 @@ Google の **Gemini Live API** を使って、
 音声での対話（STT＋TTS）は Gemini Live API が担当し、感情分析は別途テキストモデルの
 **構造化出力（Structured Output）**で行っています。
 
+> 🔰 **はじめて環境を作る人へ**: パソコンの準備から順を追った手順は
+> **[docs/開発環境構築手順書_macOS.md](docs/開発環境構築手順書_macOS.md)** にまとめています。
+
 ---
 
 ## 1. 必要なもの
@@ -50,7 +53,8 @@ uv sync
 
 ### (3) API キーを設定する
 
-API キーの取得から設定までの詳しい手順は **[API_KEY_SETUP.md](API_KEY_SETUP.md)** を見てください。
+API キーの取得から設定までの詳しい手順は **[docs/API_KEY_SETUP.md](docs/API_KEY_SETUP.md)** を見てください。
+環境構築を一から行う場合は **[docs/開発環境構築手順書_macOS.md](docs/開発環境構築手順書_macOS.md)** を参照してください。
 
 かんたんに書くと:
 
@@ -95,6 +99,8 @@ uv run python main.py
 | `config.py` | モデル名・音声・プロンプトなどの設定 |
 | `.env.example` | API キー設定のひな形（`.env` にコピーして使う） |
 | `pyproject.toml` | uv が読む依存関係の定義 |
+| `docs/` | 環境構築手順書・API キー取得マニュアルなどのドキュメント |
+| `logs/` | 会話・感情分析の記録（実行時に自動生成） |
 
 ---
 
