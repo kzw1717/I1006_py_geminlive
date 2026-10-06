@@ -50,6 +50,10 @@ uv sync
 
 ### (3) API キーを設定する
 
+API キーの取得から設定までの詳しい手順は **[API_KEY_SETUP.md](API_KEY_SETUP.md)** を見てください。
+
+かんたんに書くと:
+
 ```bash
 cp .env.example .env
 ```
