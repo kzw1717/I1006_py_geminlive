@@ -15,6 +15,9 @@ Google の **Gemini Live API** を使って、
 
 > 🔰 **はじめて環境を作る人へ**: パソコンの準備から順を追った手順は
 > **[docs/開発環境構築手順書_macOS.md](docs/開発環境構築手順書_macOS.md)** にまとめています。
+>
+> 🤖 **AI（Gemini）と開発する人へ**: コードをまとめて AI に渡す repomix の使い方は
+> **[docs/repomix_cheatsheet.md](docs/repomix_cheatsheet.md)** を参照してください（`.env` の除外に注意）。
 
 ---
 
@@ -99,7 +102,7 @@ uv run python voice/main.py
 | `voice/config.py` | モデル名・音声・プロンプトなどの設定 |
 | `.env.example` | API キー設定のひな形（`.env` にコピーして使う） |
 | `pyproject.toml` | uv が読む依存関係の定義 |
-| `docs/` | 環境構築手順書・API キー取得マニュアルなどのドキュメント |
+| `docs/` | 環境構築手順書・API キー取得マニュアル・repomix チートシートなどのドキュメント |
 | `logs/` | 会話・感情分析の記録（実行時に自動生成） |
 
 ---
