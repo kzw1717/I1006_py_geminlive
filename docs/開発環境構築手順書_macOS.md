@@ -277,8 +277,11 @@ GEMINI_API_KEY=AIzaSyxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 ### 7-2. プログラムの起動
 
+音声対話プログラムは `voice/` フォルダの中にあります。
+プロジェクトのルート（`I1006_py_geminlive`）で次を実行します。
+
 ```bash
-uv run python main.py
+uv run python voice/main.py
 ```
 
 `uv run` は仮想環境を自動で使うため、手動での有効化（`source .venv/bin/activate`）は不要です。
@@ -317,22 +320,29 @@ uv add flask
 
 `pyproject.toml` に `flask` が追記され、`uv.lock` も更新されます。
 
-### 8-2. これから増えるファイルの置き場所（予定）
+### 8-2. ファイルの置き場所（現在と予定）
 
-このプロジェクトは、コードをフォルダのルート（いちばん上）に置く構成です。
-Flask の管理画面は、次のような形で足していく予定です。
+音声対話プログラムは `voice/` フォルダにまとまっています。
+Flask の管理画面は、ルート（いちばん上）に `app.py` として足していく予定です。
 
 ```
 I1006_py_geminlive/
-├── main.py           ← 音声対話プログラム（今あるもの）
-├── config.py         ← 設定（モデル名・音声など）
-├── emotion.py        ← 感情分析（Web 画面からも再利用できる）
+├── voice/            ← 音声対話プログラム（今あるもの）
+│   ├── main.py       ← メイン（録音・再生・会話ループ）
+│   ├── config.py     ← 設定（モデル名・音声など）
+│   └── emotion.py    ← 感情分析（Web 画面からも再利用できる）
 ├── app.py            ← ★ これから作る Flask アプリ（管理画面）
 ├── templates/        ← ★ HTML テンプレート（Flask が使う）
 ├── static/           ← ★ CSS や画像
 ├── logs/             ← 会話・感情分析のログ（管理画面の表示データ）
-└── docs/             ← ドキュメント（この手順書など）
+├── docs/             ← ドキュメント（この手順書など）
+├── .env              ← API キー（各自で作成、Git には含めない）
+├── pyproject.toml    ← 依存ライブラリの定義
+└── uv.lock           ← ライブラリの正確なバージョン
 ```
+
+> `emotion.py` は感情分析の処理だけを独立させてあるので、
+> 将来 `app.py`（Flask）からも `voice/emotion.py` を再利用できます。
 
 ### 8-3. Flask アプリの起動（将来）
 
@@ -396,13 +406,13 @@ source ~/.zshrc
 Live API（音声対話）用：
 
 ```bash
-uv run python -c "import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'bidiGenerateContent' in (m.supported_actions or [])]"
+uv run python -c "import sys; sys.path.insert(0,'voice'); import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'bidiGenerateContent' in (m.supported_actions or [])]"
 ```
 
 感情分析（テキスト）用：
 
 ```bash
-uv run python -c "import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or [])]"
+uv run python -c "import sys; sys.path.insert(0,'voice'); import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or [])]"
 ```
 
 表示された名前を `.env` の `GEMINI_LIVE_MODEL` / `GEMINI_ANALYSIS_MODEL` に設定します。

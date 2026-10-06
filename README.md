@@ -75,7 +75,7 @@ GEMINI_API_KEY=ここにあなたのAPIキー
 ## 3. 実行
 
 ```bash
-uv run python main.py
+uv run python voice/main.py
 ```
 
 ### 使い方
@@ -94,9 +94,9 @@ uv run python main.py
 
 | ファイル | 役割 |
 |----------|------|
-| `main.py` | メイン。Live API への接続・録音・再生・会話ループ |
-| `emotion.py` | 感情分析（構造化出力で JSON を取得） |
-| `config.py` | モデル名・音声・プロンプトなどの設定 |
+| `voice/main.py` | メイン。Live API への接続・録音・再生・会話ループ |
+| `voice/emotion.py` | 感情分析（構造化出力で JSON を取得） |
+| `voice/config.py` | モデル名・音声・プロンプトなどの設定 |
 | `.env.example` | API キー設定のひな形（`.env` にコピーして使う） |
 | `pyproject.toml` | uv が読む依存関係の定義 |
 | `docs/` | 環境構築手順書・API キー取得マニュアルなどのドキュメント |
@@ -107,8 +107,8 @@ uv run python main.py
 ## 5. 「キーワードで会話が続く仕掛け」について
 
 - Gemini が次の質問を作るときに**直前の回答のキーワードを使う**ように、
-  `config.py` の `INTERVIEWER_SYSTEM_PROMPT`（インタビュアーの役割説明）で指示しています。
-- 同時に `emotion.py` の感情分析でも**キーワードを抽出して画面に表示**しているので、
+  `voice/config.py` の `INTERVIEWER_SYSTEM_PROMPT`（インタビュアーの役割説明）で指示しています。
+- 同時に `voice/emotion.py` の感情分析でも**キーワードを抽出して画面に表示**しているので、
   「どのキーワードが拾われて次の質問につながったか」を目で確認できます。
 
 ### 発展課題（学生向け）
@@ -137,13 +137,13 @@ uv run python main.py
 Live API（音声対話）用のモデル:
 
 ```bash
-uv run python -c "import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'bidiGenerateContent' in (m.supported_actions or [])]"
+uv run python -c "import sys; sys.path.insert(0,'voice'); import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'bidiGenerateContent' in (m.supported_actions or [])]"
 ```
 
 感情分析（テキスト）用のモデル:
 
 ```bash
-uv run python -c "import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or [])]"
+uv run python -c "import sys; sys.path.insert(0,'voice'); import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or [])]"
 ```
 
 表示された名前（`models/` は付けても外してもOK）を `.env` の

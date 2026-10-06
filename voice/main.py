@@ -156,9 +156,9 @@ def build_live_config() -> dict:
 
 def open_log_file():
     """会話ログを保存する JSONL ファイルを開く。"""
-    os.makedirs("logs", exist_ok=True)
+    os.makedirs(config.LOGS_DIR, exist_ok=True)
     stamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-    path = os.path.join("logs", f"session_{stamp}.jsonl")
+    path = os.path.join(config.LOGS_DIR, f"session_{stamp}.jsonl")
     return open(path, "w", encoding="utf-8"), path
 
 

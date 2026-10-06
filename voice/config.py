@@ -5,11 +5,20 @@
 """
 
 import os
+from pathlib import Path
 
 from dotenv import load_dotenv
 
-# .env ファイルを読み込む（存在しなくてもエラーにはならない）
-load_dotenv()
+# プロジェクトのルート（このファイルは voice/ の中にあるので、1つ上の階層）。
+# これを基準にすることで、どこから実行しても .env やログの場所がずれません。
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+
+# .env ファイル（プロジェクト直下）を読み込む（存在しなくてもエラーにはならない）
+load_dotenv(PROJECT_ROOT / ".env")
+
+# 会話・感情分析のログの保存先（プロジェクト直下の logs/）。
+# 将来の Flask 管理画面もここを読む想定。
+LOGS_DIR = PROJECT_ROOT / "logs"
 
 # --- API キー -------------------------------------------------------------
 # GEMINI_API_KEY を優先し、なければ GOOGLE_API_KEY も見る
