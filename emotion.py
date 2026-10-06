@@ -34,6 +34,8 @@ async def analyze_emotion(client, text: str) -> EmotionResult:
             "response_mime_type": "application/json",
             "response_schema": EmotionResult,
             "temperature": 0.2,  # 分析はぶれないよう低めに
+            # このサンプルでは関数呼び出し(AFC)を使わないので無効化（警告抑制）
+            "automatic_function_calling": {"disable": True},
         },
     )
     # response.parsed はスキーマに沿ってパース済みの EmotionResult インスタンス

@@ -120,8 +120,28 @@ uv run python main.py
 | `API キーが設定されていません` | `.env` の `GEMINI_API_KEY` を確認 |
 | マイクが使えない | macOS の「システム設定 → プライバシーとセキュリティ → マイク」で、使っているターミナル/VSCode に許可を与える |
 | 声が二重に聞こえる・会話が乱れる | **ヘッドホンを使う**（スピーカーだと Gemini の声をマイクが拾う） |
-| `NOT_FOUND` などモデル関連のエラー | モデル名が更新された可能性あり。[モデル一覧](https://ai.google.dev/gemini-api/docs/models)を見て `.env` の `GEMINI_LIVE_MODEL` を設定 |
+| `NOT_FOUND` / `is not found ... bidiGenerateContent` などモデル関連のエラー | モデル名が更新された可能性あり。下の「使えるモデルを調べる」で確認し、`.env` の `GEMINI_LIVE_MODEL` / `GEMINI_ANALYSIS_MODEL` を設定 |
 | `PortAudio` 関連のエラー | `uv sync` をやり直す。改善しなければ `brew install portaudio` |
+
+### 使えるモデルを調べる
+
+モデル名は時期によって変わります。`NOT_FOUND` 系のエラーが出たら、
+次のコマンドで**今あなたのキーで使えるモデル**を一覧できます。
+
+Live API（音声対話）用のモデル:
+
+```bash
+uv run python -c "import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'bidiGenerateContent' in (m.supported_actions or [])]"
+```
+
+感情分析（テキスト）用のモデル:
+
+```bash
+uv run python -c "import config; from google import genai; c=genai.Client(api_key=config.GEMINI_API_KEY); [print(m.name) for m in c.models.list() if 'generateContent' in (m.supported_actions or [])]"
+```
+
+表示された名前（`models/` は付けても外してもOK）を `.env` の
+`GEMINI_LIVE_MODEL` / `GEMINI_ANALYSIS_MODEL` に設定してください。
 
 ---
 

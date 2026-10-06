@@ -19,10 +19,13 @@ GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
 # Live API（音声の入出力＋文字起こし）に使うモデル。
 # モデル名は更新されることがあるので、最新は公式ドキュメントで確認してください。
 #   https://ai.google.dev/gemini-api/docs/models
-LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-live-2.5-flash-preview")
+# ※ 使えるモデル名は変わります。エラーになったら、使えるモデルを確認する方法を
+#    README の「うまく動かないとき」に記載しています。
+LIVE_MODEL = os.getenv("GEMINI_LIVE_MODEL", "gemini-3.1-flash-live-preview")
 
 # 感情分析（テキスト → 構造化JSON）に使うモデル。
-ANALYSIS_MODEL = os.getenv("GEMINI_ANALYSIS_MODEL", "gemini-2.5-flash")
+# "gemini-flash-latest" は常に最新の flash を指すエイリアスなので壊れにくい。
+ANALYSIS_MODEL = os.getenv("GEMINI_ANALYSIS_MODEL", "gemini-flash-latest")
 
 # --- 音声まわり -----------------------------------------------------------
 VOICE_NAME = os.getenv("GEMINI_VOICE", "Aoede")  # Gemini の声

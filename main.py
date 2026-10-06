@@ -64,13 +64,16 @@ async def collect_response(session, out_stream) -> tuple[str, str]:
     question_text = ""
 
     async for response in session.receive():
-        # response.data は音声データ（あれば）
-        if response.data:
-            await asyncio.to_thread(out_stream.write, response.data)
-
         server_content = response.server_content
         if server_content is None:
             continue
+
+        # Gemini の音声データを取り出してスピーカーで再生する。
+        # （文字起こしのテキストも混ざって届くので、音声パートだけを拾う）
+        if server_content.model_turn:
+            for part in server_content.model_turn.parts:
+                if part.inline_data and part.inline_data.data:
+                    await asyncio.to_thread(out_stream.write, part.inline_data.data)
 
         # 被験者の発話の文字起こし（STT の結果）
         if server_content.input_transcription and server_content.input_transcription.text:
@@ -217,9 +220,21 @@ async def main() -> None:
 
                 print_answer(answer)
 
-                # 感情分析（構造化出力）
-                emotion = await analyze_emotion(client, answer)
-                print_emotion(emotion)
+                # 感情分析（構造化出力）。サーバー混雑(503)などで一時的に失敗する
+                # ことがあるので、数回だけリトライし、それでもダメなら会話は続ける。
+                emotion = None
+                for attempt in range(3):
+                    try:
+                        emotion = await analyze_emotion(client, answer)
+                        break
+                    except Exception as e:  # noqa: BLE001  学生向けにまとめて対処
+                        if attempt < 2:
+                            await asyncio.sleep(2)
+                        else:
+                            print(f"   （感情分析に失敗しました: {e}）")
+
+                if emotion is not None:
+                    print_emotion(emotion)
 
                 # Gemini がキーワードを使って作った「次の質問」
                 print_question(next_question)
@@ -230,7 +245,7 @@ async def main() -> None:
                         {
                             "turn": turn,
                             "answer": answer,
-                            "emotion": emotion.model_dump(),
+                            "emotion": emotion.model_dump() if emotion else None,
                             "next_question": next_question,
                         },
                         ensure_ascii=False,
