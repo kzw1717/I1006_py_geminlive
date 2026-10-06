@@ -18,6 +18,7 @@ import json
 import os
 import sys
 
+import numpy as np
 import sounddevice as sd
 from google import genai
 from google.genai import types
@@ -51,6 +52,33 @@ def print_emotion(emo: EmotionResult) -> None:
 
 
 # ---------------------------------------------------------------------------
+# 音声の整形（冒頭フェードイン＋全体音量）
+# ---------------------------------------------------------------------------
+def shape_audio(data: bytes, played_samples: int, fade_samples: int) -> tuple[bytes, int]:
+    """再生する音声に「冒頭フェードイン」と「全体音量」を適用する。
+
+    data:          16bit PCM の音声データ（1チャンク分）
+    played_samples: この発話でこれまでに再生したサンプル数（フェードの位置計算用）
+    fade_samples:  フェードインに使うサンプル数（0 ならフェードなし）
+    戻り値: (加工後の音声データ, 更新後の played_samples)
+    """
+    samples = np.frombuffer(data, dtype=np.int16).astype(np.float32)
+    n = len(samples)
+
+    # 冒頭を 0.0→1.0 に徐々に大きくする音量カーブを作る
+    if fade_samples > 0:
+        idx = np.arange(played_samples, played_samples + n)
+        ramp = np.clip(idx / fade_samples, 0.0, 1.0)  # fade_samples 以降は 1.0
+    else:
+        ramp = np.ones(n, dtype=np.float32)
+
+    samples = samples * ramp * config.OUTPUT_GAIN
+    # 16bit の範囲に収めてから元の型へ戻す
+    samples = np.clip(samples, -32768, 32767).astype(np.int16)
+    return samples.tobytes(), played_samples + n
+
+
+# ---------------------------------------------------------------------------
 # Live API とのやりとり
 # ---------------------------------------------------------------------------
 async def collect_response(session, out_stream) -> tuple[str, str]:
@@ -63,6 +91,10 @@ async def collect_response(session, out_stream) -> tuple[str, str]:
     answer_text = ""
     question_text = ""
 
+    # この発話の冒頭フェードイン用。発話（1ターン）ごとに 0 から数え直す。
+    fade_samples = int(config.RECV_SAMPLE_RATE * config.PLAYBACK_FADE_IN_SECONDS)
+    played_samples = 0
+
     async for response in session.receive():
         server_content = response.server_content
         if server_content is None:
@@ -73,7 +105,10 @@ async def collect_response(session, out_stream) -> tuple[str, str]:
         if server_content.model_turn:
             for part in server_content.model_turn.parts:
                 if part.inline_data and part.inline_data.data:
-                    await asyncio.to_thread(out_stream.write, part.inline_data.data)
+                    pcm, played_samples = shape_audio(
+                        part.inline_data.data, played_samples, fade_samples
+                    )
+                    await asyncio.to_thread(out_stream.write, pcm)
 
         # 被験者の発話の文字起こし（STT の結果）
         if server_content.input_transcription and server_content.input_transcription.text:

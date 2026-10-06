@@ -120,6 +120,7 @@ uv run python main.py
 | `API キーが設定されていません` | `.env` の `GEMINI_API_KEY` を確認 |
 | マイクが使えない | macOS の「システム設定 → プライバシーとセキュリティ → マイク」で、使っているターミナル/VSCode に許可を与える |
 | 声が二重に聞こえる・会話が乱れる | **ヘッドホンを使う**（スピーカーだと Gemini の声をマイクが拾う） |
+| 発話の出だしだけ音が大きい | Mac 内蔵スピーカーの音量補正でよく起きます。冒頭フェードインで緩和済み。さらに調整したいときは `config.py` の `PLAYBACK_FADE_IN_SECONDS`（冒頭を大きくする秒数）や `OUTPUT_GAIN`（全体音量。例: 0.6）を変更 |
 | `NOT_FOUND` / `is not found ... bidiGenerateContent` などモデル関連のエラー | モデル名が更新された可能性あり。下の「使えるモデルを調べる」で確認し、`.env` の `GEMINI_LIVE_MODEL` / `GEMINI_ANALYSIS_MODEL` を設定 |
 | `PortAudio` 関連のエラー | `uv sync` をやり直す。改善しなければ `brew install portaudio` |
 
